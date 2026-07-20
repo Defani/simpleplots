@@ -7,6 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Poppins:wght@400;600;700&family=Roboto:wght@400;700&family=Nunito:wght@400;700&family=Lato:wght@400;700&family=Merriweather:wght@400;700&family=Playfair+Display:wght@400;700&family=Montserrat:wght@400;600;700&family=Raleway:wght@400;600;700&family=Source+Sans+Pro:wght@400;700&family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
+<!-- MathJax must load before plotly-cartesian.min.js so chart/axis titles can render $...$ LaTeX -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.js"></script>
 <style>
   :root{
     /* dark soft (default) */
@@ -56,11 +58,16 @@
   .topbar-divider{ width:1px; align-self:stretch; background:var(--line-strong); margin:0 2px; }
   .app{ display:flex; min-height:calc(100vh - 55px); }
   .sidebar{
-    width:360px; flex-shrink:0; background:var(--panel);
+    width:340px; flex-shrink:0; background:var(--panel);
     border-right:1px solid var(--line); padding:20px; overflow-y:auto;
     max-height:calc(100vh - 55px);
   }
-  .main{ flex:1; padding:24px; display:flex; flex-direction:column; align-items:center; overflow:auto; }
+  .style-panel{
+    width:300px; flex-shrink:0; background:var(--panel);
+    border-left:1px solid var(--line); padding:20px; overflow-y:auto;
+    max-height:calc(100vh - 55px);
+  }
+  .main{ flex:1; padding:24px; display:flex; flex-direction:column; align-items:center; overflow:auto; min-width:280px; }
   .subtitle{ font-size:12px; color:var(--ink-soft); margin:0 0 16px; }
   h2{ font-size:11px; text-transform:uppercase; letter-spacing:.8px; color:var(--accent);
       margin:22px 0 8px; font-weight:700; display:flex; align-items:center; gap:6px; }
@@ -94,6 +101,10 @@
     font-family:inherit; font-size:13px; background:var(--panel-2); color:var(--ink);
   }
   select:focus, input:focus, textarea:focus{ outline:2px solid var(--accent); outline-offset:1px; }
+  .input-row{ display:flex; gap:6px; }
+  .input-row input{ flex:1; min-width:0; }
+  .unit-picker{ width:46px; flex-shrink:0; padding:6px 2px; font-size:13px; text-align:center; cursor:pointer; }
+  input[type=color]{ padding:2px; height:36px; cursor:pointer; }
   .series-list{ display:flex; flex-direction:column; gap:6px; margin-top:6px; }
   .series-item{
     display:flex; align-items:center; gap:8px; padding:6px 8px; border:1px solid var(--line);
@@ -126,12 +137,21 @@
   .num-pair > div{ flex:1; }
   .file-btn{ position:relative; overflow:hidden; }
   .file-btn input[type=file]{ position:absolute; inset:0; opacity:0; cursor:pointer; }
+  .hint{ font-size:11px; color:var(--ink-soft); line-height:1.5; margin-top:4px; }
+  .status{ font-size:12px; margin-top:8px; padding:6px 8px; border-radius:6px; display:none; }
+  .status.error{ display:block; background:#4a2622; color:var(--danger); }
+  .status.ok{ display:block; background:var(--accent-soft); color:var(--ink); }
   .powered{ margin-top:16px; font-size:10.5px; color:var(--ink-soft); text-align:center; }
   .powered a{ color:var(--accent); }
   html[data-theme="dark"] .powered a{ color:#7fb3c9; }
   ::-webkit-scrollbar{ width:9px; height:9px; }
   ::-webkit-scrollbar-thumb{ background:var(--line-strong); border-radius:5px; }
   ::-webkit-scrollbar-track{ background:transparent; }
+  @media (max-width: 1150px){
+    .app{ flex-wrap:wrap; }
+    .sidebar, .style-panel{ width:100%; max-height:none; border:none; border-bottom:1px solid var(--line); }
+    .main{ order:3; width:100%; }
+  }
 </style>
 </head>
 <body>
@@ -168,7 +188,7 @@
 </div>
 <div class="app">
   <div class="sidebar">
-    <p class="subtitle">Set your canvas, paste or import data, style every element, export publication-ready charts.</p>
+    <p class="subtitle">Set your canvas, paste or import data, then style it. Color, title & legend are on the right panel →</p>
 
     <h2>Canvas size</h2>
     <div class="toggle-group">
@@ -236,38 +256,18 @@
     <div class="check-row"><input type="checkbox" id="outlineFrame"><label for="outlineFrame">Frame border around chart</label></div>
     <div class="check-row"><input type="checkbox" id="showValues"><label for="showValues">Show value labels</label></div>
 
-    <h2>Color palette <span class="badge">30 palettes</span></h2>
-    <div class="palette-grid" id="paletteGrid"></div>
-
-    <h2>Title &amp; subtitle</h2>
-    <label class="field-label">Chart title</label>
-    <input type="text" id="chartTitle" value="">
-    <label class="field-label">Subtitle</label>
-    <input type="text" id="chartSubtitle" value="">
-    <label class="field-label">Title font</label>
-    <select id="fontTitleSelect"></select>
-    <div class="num-pair" style="margin-top:8px;">
-      <div>
-        <label class="field-label">Font size</label>
-        <input type="number" id="titleFontSize" value="18" min="8" max="60" step="1">
-      </div>
-      <div style="display:flex; align-items:flex-end; gap:10px; padding-bottom:6px;">
-        <div class="check-row" style="margin:0;"><input type="checkbox" id="titleBold" checked><label for="titleBold">Bold</label></div>
-        <div class="check-row" style="margin:0;"><input type="checkbox" id="titleItalic"><label for="titleItalic">Italic</label></div>
-      </div>
-    </div>
-    <label class="field-label">Title alignment</label>
-    <div class="toggle-group">
-      <button id="titleAlignLeft" class="active">Left</button>
-      <button id="titleAlignCenter">Center</button>
-      <button id="titleAlignRight">Right</button>
-    </div>
-
     <h2>Axis labels &amp; body font</h2>
     <label class="field-label">Category axis title</label>
-    <input type="text" id="xLabel" value="Plot">
+    <div class="input-row">
+      <input type="text" id="xLabel" value="Plot">
+      <select class="unit-picker" data-target="xLabel" title="Insert unit or symbol"></select>
+    </div>
     <label class="field-label">Value axis title</label>
-    <input type="text" id="yLabel" value="AGC (ton/ha)">
+    <div class="input-row">
+      <input type="text" id="yLabel" value="AGC (ton/ha)">
+      <select class="unit-picker" data-target="yLabel" title="Insert unit or symbol"></select>
+    </div>
+    <div class="hint">Supports LaTeX: wrap formulas in $...$, e.g. $CO_2$ or $R^2$. Or tap Ω to insert a ready-made unit/symbol.</div>
     <label class="field-label">Body font (axes, legend, ticks)</label>
     <select id="fontBodySelect"></select>
     <label class="field-label">Body font size</label>
@@ -292,6 +292,57 @@
       <input type="number" id="lineWidthInput" value="2.2" min="0.5" max="10" step="0.2">
     </div>
 
+    <div class="powered">Rendered with Plotly.js. Built by <a href="https://github.com/Defani" target="_blank" rel="noopener">Defani</a></div>
+  </div>
+
+  <div class="main">
+    <div class="chart-frame">
+      <div id="scaleWrap">
+        <div id="plotlyDiv"></div>
+      </div>
+    </div>
+    <div id="scaleNote"></div>
+  </div>
+
+  <div class="style-panel">
+    <h2>Text color</h2>
+    <label class="field-label">Applies to title, axis, legend &amp; ticks</label>
+    <input type="color" id="textColor" value="#1a1a1a">
+
+    <h2>Color palette <span class="badge">30 palettes</span></h2>
+    <div class="palette-grid" id="paletteGrid"></div>
+
+    <h2>Title &amp; subtitle</h2>
+    <label class="field-label">Chart title</label>
+    <div class="input-row">
+      <input type="text" id="chartTitle" value="">
+      <select class="unit-picker" data-target="chartTitle" title="Insert unit or symbol"></select>
+    </div>
+    <label class="field-label">Subtitle</label>
+    <div class="input-row">
+      <input type="text" id="chartSubtitle" value="">
+      <select class="unit-picker" data-target="chartSubtitle" title="Insert unit or symbol"></select>
+    </div>
+    <div class="hint">Supports LaTeX: wrap formulas in $...$, e.g. $R^2 = 0.95$. Note: legend text and tick labels don't support LaTeX (a Plotly limitation) — use the Ω symbol picker for those instead.</div>
+    <label class="field-label">Title font</label>
+    <select id="fontTitleSelect"></select>
+    <div class="num-pair" style="margin-top:8px;">
+      <div>
+        <label class="field-label">Font size</label>
+        <input type="number" id="titleFontSize" value="18" min="8" max="60" step="1">
+      </div>
+      <div style="display:flex; align-items:flex-end; gap:10px; padding-bottom:6px;">
+        <div class="check-row" style="margin:0;"><input type="checkbox" id="titleBold" checked><label for="titleBold">Bold</label></div>
+        <div class="check-row" style="margin:0;"><input type="checkbox" id="titleItalic"><label for="titleItalic">Italic</label></div>
+      </div>
+    </div>
+    <label class="field-label">Title alignment</label>
+    <div class="toggle-group">
+      <button id="titleAlignLeft" class="active">Left</button>
+      <button id="titleAlignCenter">Center</button>
+      <button id="titleAlignRight">Right</button>
+    </div>
+
     <h2>Legend</h2>
     <div class="check-row"><input type="checkbox" id="showLegend" checked><label for="showLegend">Show legend</label></div>
     <label class="field-label">Position</label>
@@ -310,17 +361,6 @@
       <button id="legendCol2">2 columns</button>
     </div>
     <div class="check-row"><input type="checkbox" id="legendBorder"><label for="legendBorder">Border box around legend</label></div>
-
-    <div class="powered">Rendered with Plotly.js. Built by <a href="https://github.com/Defani" target="_blank" rel="noopener">Defani</a></div>
-  </div>
-
-  <div class="main">
-    <div class="chart-frame">
-      <div id="scaleWrap">
-        <div id="plotlyDiv"></div>
-      </div>
-    </div>
-    <div id="scaleNote"></div>
   </div>
 </div>
 

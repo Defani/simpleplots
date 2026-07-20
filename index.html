@@ -260,7 +260,50 @@
     </div>
     <div class="check-row"><input type="checkbox" id="outlineMarker" checked><label for="outlineMarker">Outline on markers</label></div>
     <div class="check-row"><input type="checkbox" id="outlineFrame"><label for="outlineFrame">Frame border around chart</label></div>
+    <div class="num-pair" style="margin-top:8px;">
+      <div>
+        <label class="field-label">Frame border width</label>
+        <input type="number" id="frameBorderWidth" value="1.4" min="0.2" max="10" step="0.2">
+      </div>
+      <div>
+        <label class="field-label">Axis line width</label>
+        <input type="number" id="axisLineWidth" value="1" min="0.2" max="10" step="0.2">
+      </div>
+    </div>
     <div class="check-row"><input type="checkbox" id="showValues"><label for="showValues">Show value labels</label></div>
+
+    <h2>Axis range</h2>
+    <label class="field-label">X-axis range</label>
+    <div class="toggle-group">
+      <button id="xRangeAuto" class="active">Auto (data)</button>
+      <button id="xRangeCustom">Custom</button>
+    </div>
+    <div class="num-pair" id="xRangeInputs" style="margin-top:6px; display:none;">
+      <div>
+        <label class="field-label">Min</label>
+        <input type="number" id="xRangeMin" step="any">
+      </div>
+      <div>
+        <label class="field-label">Max</label>
+        <input type="number" id="xRangeMax" step="any">
+      </div>
+    </div>
+    <label class="field-label" style="margin-top:10px;">Y-axis range</label>
+    <div class="toggle-group">
+      <button id="yRangeAuto" class="active">Auto (data)</button>
+      <button id="yRangeCustom">Custom</button>
+    </div>
+    <div class="num-pair" id="yRangeInputs" style="margin-top:6px; display:none;">
+      <div>
+        <label class="field-label">Min</label>
+        <input type="number" id="yRangeMin" step="any">
+      </div>
+      <div>
+        <label class="field-label">Max</label>
+        <input type="number" id="yRangeMax" step="any">
+      </div>
+    </div>
+    <div class="hint">Custom range applies to whichever axis is shown on that side (X/Y swap on horizontal orientation). Only works for numeric axes — not category axes like Pie.</div>
 
     <h2>Axis labels &amp; body font</h2>
     <label class="field-label">Category axis title</label>
@@ -330,6 +373,8 @@
       <select class="unit-picker" data-target="chartSubtitle" title="Insert unit or symbol"></select>
     </div>
     <div class="hint">Supports LaTeX: wrap formulas in $...$, e.g. $R^2 = 0.95$. Note: legend text and tick labels don't support LaTeX (a Plotly limitation) — use the Ω symbol picker for those instead.</div>
+    <label class="field-label">Space between title &amp; subtitle</label>
+    <input type="number" id="titleSubtitleGap" value="4" min="0" max="40" step="1">
     <label class="field-label">Title font</label>
     <select id="fontTitleSelect"></select>
     <div class="num-pair" style="margin-top:8px;">
@@ -361,11 +406,16 @@
       <option value="bottom-center">Bottom center</option>
       <option value="inside-top-right">Inside, top right corner</option>
     </select>
+    <label class="field-label">Legend title (label)</label>
+    <input type="text" id="legendTitle" value="" placeholder="e.g. Species">
     <label class="field-label">Legend columns</label>
     <div class="toggle-group">
-      <button id="legendCol1" class="active">1 column</button>
-      <button id="legendCol2">2 columns</button>
+      <button id="legendCol1" class="active">1</button>
+      <button id="legendCol2">2</button>
+      <button id="legendCol3">3</button>
+      <button id="legendCol4">4</button>
     </div>
+    <div class="hint">Multi-column only applies to vertical legend positions (Right middle, Left middle, Inside top-right).</div>
     <div class="check-row"><input type="checkbox" id="legendBorder"><label for="legendBorder">Border box around legend</label></div>
   </div>
 </div>

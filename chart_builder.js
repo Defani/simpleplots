@@ -32,7 +32,7 @@ var FONTS = [
   {label:'Quicksand', value:"'Quicksand', sans-serif"}
 ];
 
-/* ===================== PALETTES (30) ===================== */
+/* ===================== PALETTES (49) ===================== */
 var PALETTES = [
   {name:'Mangrove (default)', colors:['#2f6360','#c9a66b','#8a5a44','#5c7a99','#a5402f','#6b6b3a']},
   {name:'Forest Canopy', colors:['#1e4d3a','#3d7a5c','#6ba368','#a4c95f','#d9c25c','#8a6b3d']},
@@ -62,7 +62,27 @@ var PALETTES = [
   {name:'Seaborn Muted', colors:['#4878d0','#ee854a','#6acc64','#d65f5f','#956cb4','#8c613c','#dc7ec0','#797979','#d5bb67','#82c6e2']},
   {name:'Seaborn Bright', colors:['#023eff','#ff7c00','#1ac938','#e8000b','#8b2be2','#9f4800','#f14cc1','#a3a3a3','#ffc400','#00d7ff']},
   {name:'Seaborn Pastel', colors:['#a1c9f4','#ffb482','#8de5a1','#ff9f9b','#d0bbff','#debb9b','#fab0e4','#cfcfcf','#fffea3','#b9f2f0']},
-  {name:'Seaborn Colorblind', colors:['#0173b2','#de8f05','#029e73','#d55e00','#cc78bc','#ca9161','#fbafe4','#949494','#ece133','#56b4e9']}
+  {name:'Seaborn Colorblind', colors:['#0173b2','#de8f05','#029e73','#d55e00','#cc78bc','#ca9161','#fbafe4','#949494','#ece133','#56b4e9']},
+  {name:'Grayscale', colors:['#1a1a1a','#3d3d3d','#606060','#828282','#a5a5a5','#c8c8c8','#e0e0e0']},
+  {name:'Solarized', colors:['#268bd2','#2aa198','#859900','#b58900','#cb4b16','#dc322f','#d33682','#6c71c4']},
+  {name:'Nord', colors:['#5e81ac','#81a1c1','#88c0d0','#8fbcbb','#a3be8c','#ebcb8b','#d08770','#bf616a']},
+  {name:'Dracula', colors:['#bd93f9','#ff79c6','#8be9fd','#50fa7b','#ffb86c','#ff5555','#f1fa8c','#6272a4']},
+  {name:'Material Design', colors:['#f44336','#e91e63','#9c27b0','#673ab7','#3f51b5','#2196f3','#009688','#4caf50','#ff9800']},
+  {name:'Flat UI', colors:['#1abc9c','#2ecc71','#3498db','#9b59b6','#34495e','#f1c40f','#e67e22','#e74c3c']},
+  {name:'Slate & Steel', colors:['#263238','#37474f','#455a64','#546e7a','#607d8b','#78909c','#90a4ae','#b0bec5']},
+  {name:'Earth Tones', colors:['#7c6a4d','#9c8358','#c2a45c','#8a9b4e','#5c7a5c','#6b4f3a','#4d3b2a']},
+  {name:'Pastel Rainbow', colors:['#ffadad','#ffd6a5','#fdffb6','#caffbf','#9bf6ff','#a0c4ff','#bdb2ff','#ffc6ff']},
+  {name:'Neon Bright', colors:['#ff006e','#fb5607','#ffbe0b','#8338ec','#3a86ff','#06ffa5','#ff4d6d']},
+  {name:'Ocean Blues', colors:['#03045e','#023e8a','#0077b6','#0096c7','#00b4d8','#48cae4','#90e0ef','#ade8f4']},
+  {name:'Sunset Gradient', colors:['#03071e','#370617','#6a040f','#9d0208','#d00000','#dc2f02','#e85d04','#f48c06','#faa307','#ffba08']},
+  {name:'Ice Blues', colors:['#caf0f8','#ade8f4','#90e0ef','#48cae4','#00b4d8','#0096c7','#0077b6','#023e8a']},
+  {name:'Berry Mix', colors:['#7b2cbf','#9d4edd','#c77dff','#e0aaff','#5a189a','#3c096c','#240046']},
+  {name:'Forest Greens', colors:['#081c15','#1b4332','#2d6a4f','#40916c','#52b788','#74c69d','#95d5b2','#b7e4c7']},
+  {name:'Copper & Rust', colors:['#3d1c02','#6f4518','#9c6b30','#c08a4e','#d9a066','#e8bf8a','#f2d9b8']},
+  {name:'Royal Jewel Tones', colors:['#03071e','#370617','#6a040f','#d00000','#4361ee','#3a0ca3','#7209b7','#f72585']},
+  {name:'Retro 80s', colors:['#ff6ec7','#ff9a00','#fcf300','#00e5ff','#7b2ff7','#00ff87','#ff2e63']},
+  {name:'Monochrome Blue', colors:['#0d1b2a','#1b263b','#415a77','#778da9','#a3c4dc','#c9e4f6']},
+  {name:'Corporate Navy & Gold', colors:['#0a1128','#1c2541','#3a506b','#5bc0be','#c9a66b','#e8d5a3']}
 ];
 
 /* native plotly pattern shapes, used whenever style includes patterns */
@@ -1019,6 +1039,20 @@ document.getElementById('themeToggle').addEventListener('click', function(){
   applyTheme(state.theme === 'dark' ? 'light' : 'dark');
 });
 applyTheme('dark');
+
+/* ===================== SLIDER VALUE DISPLAYS ===================== */
+/* Keeps the little number badge next to every range slider in sync, without touching each slider's own listener above. */
+function initSliderValueDisplays(){
+  var sliders = document.querySelectorAll('input[type=range]');
+  Array.prototype.forEach.call(sliders, function(s){
+    var out = document.getElementById(s.id + 'Val');
+    if(!out) return;
+    var update = function(){ out.textContent = s.value; };
+    update();
+    s.addEventListener('input', update);
+  });
+}
+initSliderValueDisplays();
 
 /* ===================== INIT ===================== */
 document.getElementById('chartTypeHint').textContent = CHART_TYPE_HINTS[state.chartType];

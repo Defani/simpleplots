@@ -18,7 +18,8 @@ A single-page, no-backend chart builder for publication-ready figures. Paste or 
 Simple Plots is a **client-side-only web app**: open the page (or visit the GitHub Pages link below) and the entire tool — data parsing, chart rendering, styling, and export — happens locally in your browser tab. Nothing you paste or upload is ever sent to a server, because there is no server. The app is just static HTML, CSS, and JavaScript, deployed straight from this repository via GitHub Pages, which is why it costs nothing to run and needs zero setup.
 
 ## Interface
-<img width="1919" height="1024" alt="Screenshot 2026-07-20 142211" src="https://github.com/user-attachments/assets/5616280e-e019-4959-a6aa-8ee717a2f014" />
+<img width="1902" height="981" alt="Screenshot 2026-07-20 173336" src="https://github.com/user-attachments/assets/0d485e73-058b-4bd6-9093-fdeadbb6de70" />
+
 
 Once deployed to GitHub Pages:
 
@@ -45,7 +46,13 @@ https://defani.github.io/simpleplots/
 - **Light/dark UI theme** toggle (dark is the default)
 - **Zero install for users**: Plotly.js is bundled locally; Google Fonts, MathJax, and Papa Parse load from CDN — no build step, no server, no signup required
 
-
+## Galery
+1. Pattern Fill + Colors
+<img width="3125" height="2187" alt="chart_300dpi (4)" src="https://github.com/user-attachments/assets/aae4f143-29a4-467c-b187-0913ea22ec7c" />
+2. Colors palette only
+<img width="3125" height="2187" alt="chart_300dpi (7)" src="https://github.com/user-attachments/assets/7453e487-cc59-432f-9acb-f1edf89c8089" />
+3. Pattern Only
+   <img width="3125" height="2187" alt="chart_300dpi (5)" src="https://github.com/user-attachments/assets/9942e751-2884-4730-92dc-1acde698ce4f" />
 
 ## Project structure
 

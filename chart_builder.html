@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simple Plots</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Poppins:wght@400;600;700&family=Roboto:wght@400;700&family=Nunito:wght@400;700&family=Lato:wght@400;700&family=Merriweather:wght@400;700&family=Playfair+Display:wght@400;700&family=Montserrat:wght@400;600;700&family=Raleway:wght@400;600;700&family=Source+Sans+Pro:wght@400;700&family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* dark soft (default) */
+    --ink:#eae7df; --ink-soft:#a6a39a; --line:#34363a; --line-strong:#484a4e;
+    --bg:#1b1d1f; --panel:#232527; --panel-2:#2a2c2f; --accent:#0F3040; --accent-soft:#173e51;
+    --sand:#d9b97e; --danger:#e0806c; --shadow:rgba(0,0,0,.35);
+  }
+  html[data-theme="light"]{
+    --ink:#1a1a1a; --ink-soft:#5c5c58; --line:#d8d6cd; --line-strong:#b9b6aa;
+    --bg:#faf9f5; --panel:#ffffff; --panel-2:#f3f1ea; --accent:#0F3040; --accent-soft:#dbe4e7;
+    --sand:#c9a66b; --danger:#a5402f; --shadow:rgba(0,0,0,.08);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:'Segoe UI', Arial, sans-serif; font-size:14px;
+    transition:background .2s, color .2s;
+  }
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 20px; background:var(--panel); border-bottom:1px solid var(--line);
+  }
+  .brand{ display:flex; align-items:center; gap:10px; }
+  .brand h1{ font-size:15px; margin:0; font-weight:700; letter-spacing:.2px; }
+  .brand span{ font-size:11px; color:var(--ink-soft); display:block; }
+  .topbar-actions{ display:flex; align-items:center; gap:10px; }
+  .icon-btn{
+    display:flex; align-items:center; justify-content:center; width:34px; height:34px;
+    border-radius:8px; border:1px solid var(--line-strong); background:var(--panel-2);
+    color:var(--ink); cursor:pointer; transition:background .12s;
+  }
+  .icon-btn:hover{ background:var(--accent-soft); border-color:var(--accent); }
+  a.icon-btn{ text-decoration:none; }
+  .app{ display:flex; min-height:calc(100vh - 55px); }
+  .sidebar{
+    width:360px; flex-shrink:0; background:var(--panel);
+    border-right:1px solid var(--line); padding:20px; overflow-y:auto;
+    max-height:calc(100vh - 55px);
+  }
+  .main{ flex:1; padding:24px; display:flex; flex-direction:column; align-items:center; overflow:auto; }
+  .subtitle{ font-size:12px; color:var(--ink-soft); margin:0 0 16px; }
+  h2{ font-size:11px; text-transform:uppercase; letter-spacing:.8px; color:var(--accent);
+      margin:22px 0 8px; font-weight:700; display:flex; align-items:center; gap:6px; }
+  html[data-theme="dark"] h2{ color:#7fb3c9; }
+  h2:first-of-type{ margin-top:0; }
+  h2 .badge{ font-size:9px; text-transform:none; letter-spacing:0; color:var(--ink-soft); font-weight:400; }
+  textarea{
+    width:100%; height:110px; font-family:'Consolas','Courier New', monospace; font-size:12px;
+    border:1px solid var(--line-strong); border-radius:6px; padding:8px; resize:vertical;
+    background:var(--panel-2); color:var(--ink);
+  }
+  button{
+    font-family:inherit; font-size:13px; cursor:pointer; border-radius:6px;
+    border:1px solid var(--line-strong); background:var(--panel-2); padding:8px 12px;
+    color:var(--ink); transition:background .12s, border-color .12s;
+  }
+  button:hover{ background:var(--accent-soft); border-color:var(--accent); }
+  .btn-primary{ background:var(--accent); color:#ffffff; border-color:var(--accent); width:100%; margin-top:8px; font-weight:600; }
+  .btn-primary:hover{ filter:brightness(1.3); }
+  .row{ display:flex; gap:8px; margin-bottom:8px; }
+  .row button{ flex:1; }
+  .toggle-group{ display:flex; border:1px solid var(--line-strong); border-radius:6px; overflow:hidden; flex-wrap:wrap; }
+  .toggle-group button{ flex:1; border:none; border-radius:0; margin:0; background:var(--panel-2); min-width:80px; font-size:12.5px; padding:8px 6px; }
+  .toggle-group button.active{ background:var(--accent); color:#ffffff; font-weight:600; }
+  .toggle-group button + button{ border-left:1px solid var(--line-strong); }
+  label.field-label{ display:block; font-size:12px; color:var(--ink-soft); margin:10px 0 4px; }
+  .check-row{ display:flex; align-items:center; gap:8px; margin:8px 0; font-size:13px; }
+  .check-row input{ width:16px; height:16px; accent-color:var(--accent); }
+  select, input[type=text], input[type=number]{
+    width:100%; padding:6px 8px; border:1px solid var(--line-strong); border-radius:6px;
+    font-family:inherit; font-size:13px; background:var(--panel-2); color:var(--ink);
+  }
+  select:focus, input:focus, textarea:focus{ outline:2px solid var(--accent); outline-offset:1px; }
+  .series-list{ display:flex; flex-direction:column; gap:6px; margin-top:6px; }
+  .series-item{
+    display:flex; align-items:center; gap:8px; padding:6px 8px; border:1px solid var(--line);
+    border-radius:6px; background:var(--panel-2);
+  }
+  .series-item input[type=checkbox]{ flex-shrink:0; width:15px; height:15px; accent-color:var(--accent); }
+  .series-item input[type=text]{ flex:1; padding:3px 6px; font-size:12px; border:1px solid transparent; background:transparent; color:var(--ink); }
+  .series-item input[type=text]:hover, .series-item input[type=text]:focus{ border-color:var(--line-strong); background:var(--panel); }
+  .swatch{ width:18px; height:18px; border:1px solid var(--line-strong); flex-shrink:0; cursor:pointer; border-radius:4px; }
+  .pattern-picker{ display:none; grid-template-columns:repeat(4,1fr); gap:4px; margin:4px 0 2px 26px; }
+  .pattern-picker.open{ display:grid; }
+  .pattern-picker div{ width:24px; height:24px; border:1px solid var(--line-strong); cursor:pointer; border-radius:4px; background:#fff; }
+  .pattern-picker div.selected{ outline:2px solid var(--accent); outline-offset:1px; }
+  .palette-grid{ display:grid; grid-template-columns:1fr; gap:5px; max-height:220px; overflow-y:auto; margin-top:6px;
+    border:1px solid var(--line); border-radius:6px; padding:6px; background:var(--panel-2); }
+  .palette-item{ display:flex; align-items:center; gap:8px; padding:5px 6px; border-radius:5px; cursor:pointer; }
+  .palette-item:hover{ background:var(--accent-soft); }
+  .palette-item.active{ background:var(--accent-soft); box-shadow:inset 0 0 0 1px var(--accent); }
+  .palette-swatches{ display:flex; flex-shrink:0; }
+  .palette-swatches div{ width:12px; height:16px; margin-right:1px; border-radius:1px; }
+  .palette-name{ font-size:11.5px; color:var(--ink); }
+  .chart-frame{
+    background:#ffffff; border:1px solid var(--line); border-radius:10px; padding:18px;
+    max-width:100%; box-shadow:0 6px 24px var(--shadow);
+  }
+  #plotlyDiv{ overflow:visible; }
+  .footer-actions{ display:flex; gap:8px; margin-top:16px; flex-wrap:wrap; }
+  .footer-actions button{ flex:1; min-width:100px; }
+  .hint{ font-size:11px; color:var(--ink-soft); line-height:1.5; margin-top:4px; }
+  .status{ font-size:12px; margin-top:8px; padding:6px 8px; border-radius:6px; display:none; }
+  .status.error{ display:block; background:#4a2622; color:var(--danger); }
+  .status.ok{ display:block; background:var(--accent-soft); color:var(--ink); }
+  .num-pair{ display:flex; gap:8px; }
+  .num-pair > div{ flex:1; }
+  .file-btn{ position:relative; overflow:hidden; }
+  .file-btn input[type=file]{ position:absolute; inset:0; opacity:0; cursor:pointer; }
+  .badges{ margin-top:18px; display:flex; flex-wrap:wrap; gap:5px; justify-content:center; }
+  .badges img{ height:20px; display:block; }
+  .powered{ margin-top:8px; font-size:10.5px; color:var(--ink-soft); text-align:center; }
+  .powered a{ color:var(--accent); }
+  html[data-theme="dark"] .powered a{ color:#7fb3c9; }
+  ::-webkit-scrollbar{ width:9px; height:9px; }
+  ::-webkit-scrollbar-thumb{ background:var(--line-strong); border-radius:5px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="brand">
+    <div>
+      <h1>Simple Plots</h1>
+      <span>All chart types, publication-ready</span>
+    </div>
+  </div>
+  <div class="topbar-actions">
+    <button class="icon-btn" id="themeToggle" title="Toggle light/dark theme">
+      <svg id="themeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+    </button>
+    <a class="icon-btn" href="https://github.com/Defani" target="_blank" rel="noopener" title="GitHub: Defani">
+      <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"></path></svg>
+    </a>
+  </div>
+</div>
+<div class="app">
+  <div class="sidebar">
+    <p class="subtitle">Paste or import data, style every element, export publication-ready charts (PNG or SVG, 150-500 DPI).</p>
+
+    <h2>Data</h2>
+    <textarea id="dataInput" spellcheck="false"></textarea>
+    <div class="hint">Paste from Excel (tab-separated) or CSV (comma-separated). First column is the category, remaining columns are series.</div>
+    <div class="row" style="margin-top:8px;">
+      <button class="file-btn" id="csvBtnWrap">Import CSV
+        <input type="file" id="csvFile" accept=".csv,.tsv,.txt">
+      </button>
+    </div>
+    <button class="btn-primary" id="parseBtn">Load data</button>
+    <div class="status" id="parseStatus"></div>
+
+    <h2>Chart type</h2>
+    <select id="chartType">
+      <option value="bar-group">Bar - Grouped</option>
+      <option value="bar-stack">Bar - Stacked</option>
+      <option value="line">Line</option>
+      <option value="area">Area</option>
+      <option value="scatter">Scatter</option>
+      <option value="pie">Pie</option>
+      <option value="donut">Donut</option>
+      <option value="histogram">Histogram</option>
+      <option value="box">Box plot</option>
+      <option value="violin">Violin plot</option>
+      <option value="heatmap">Heatmap</option>
+    </select>
+    <div class="hint" id="chartTypeHint">Grouped bar: one group of bars per category, one bar per series.</div>
+
+    <h2>Series</h2>
+    <div class="series-list" id="seriesList"></div>
+
+    <h2>Orientation</h2>
+    <div class="toggle-group">
+      <button id="orientVert" class="active">Vertical</button>
+      <button id="orientHoriz">Horizontal</button>
+    </div>
+
+    <h2>Visual style</h2>
+    <div class="toggle-group">
+      <button id="styleColor" class="active">Color</button>
+      <button id="styleColorPattern">Color + Pattern</button>
+      <button id="stylePattern">Pattern</button>
+    </div>
+    <div class="check-row"><input type="checkbox" id="outlineMarker" checked><label for="outlineMarker">Outline on markers</label></div>
+    <div class="check-row"><input type="checkbox" id="outlineFrame"><label for="outlineFrame">Frame border around chart</label></div>
+    <div class="check-row"><input type="checkbox" id="showValues"><label for="showValues">Show value labels</label></div>
+
+    <h2>Color palette <span class="badge">30 palettes</span></h2>
+    <div class="palette-grid" id="paletteGrid"></div>
+
+    <h2>Title &amp; subtitle</h2>
+    <label class="field-label">Chart title</label>
+    <input type="text" id="chartTitle" value="">
+    <label class="field-label">Subtitle</label>
+    <input type="text" id="chartSubtitle" value="">
+    <label class="field-label">Title and subtitle font</label>
+    <select id="fontTitleSelect"></select>
+
+    <h2>Axis labels &amp; body font</h2>
+    <label class="field-label">Category axis title</label>
+    <input type="text" id="xLabel" value="Plot">
+    <label class="field-label">Value axis title</label>
+    <input type="text" id="yLabel" value="AGC (ton/ha)">
+    <label class="field-label">Body font (axes, legend, ticks)</label>
+    <select id="fontBodySelect"></select>
+
+    <h2>Legend</h2>
+    <div class="check-row"><input type="checkbox" id="showLegend" checked><label for="showLegend">Show legend</label></div>
+    <label class="field-label">Position</label>
+    <select id="legendPos">
+      <option value="top-right">Top right</option>
+      <option value="top-center">Top center</option>
+      <option value="top-left">Top left</option>
+      <option value="right-middle">Right middle</option>
+      <option value="left-middle">Left middle</option>
+      <option value="bottom-center">Bottom center</option>
+      <option value="inside-top-right">Inside, top right corner</option>
+    </select>
+    <label class="field-label">Legend columns</label>
+    <div class="toggle-group">
+      <button id="legendCol1" class="active">1 column</button>
+      <button id="legendCol2">2 columns</button>
+    </div>
+    <div class="check-row"><input type="checkbox" id="legendBorder"><label for="legendBorder">Border box around legend</label></div>
+
+    <h2>Dimensions</h2>
+    <div class="num-pair">
+      <div>
+        <label class="field-label">Width (px)</label>
+        <input type="number" id="chartWidth" value="720" step="20">
+      </div>
+      <div>
+        <label class="field-label">Height (px)</label>
+        <input type="number" id="chartHeight" value="420" step="20">
+      </div>
+    </div>
+
+    <h2>Export</h2>
+    <label class="field-label">PNG export resolution</label>
+    <select id="dpiSelect">
+      <option value="150">150 DPI</option>
+      <option value="300" selected>300 DPI</option>
+      <option value="500">500 DPI</option>
+    </select>
+    <div class="footer-actions">
+      <button id="exportSvg">Export SVG</button>
+      <button id="exportPng">Export PNG</button>
+    </div>
+
+    <div class="badges">
+      <img src="https://img.shields.io/badge/HTML5-E34F26?logo=html5&logoColor=white" alt="HTML5">
+      <img src="https://img.shields.io/badge/CSS3-1572B6?logo=css3&logoColor=white" alt="CSS3">
+      <img src="https://img.shields.io/badge/JavaScript-F7DF1E?logo=javascript&logoColor=black" alt="JavaScript">
+      <img src="https://img.shields.io/badge/Plotly.js-3F4F75?logo=plotly&logoColor=white" alt="Plotly.js">
+      <img src="https://img.shields.io/badge/Backend-None-brightgreen" alt="No backend">
+    </div>
+    <div class="powered">Rendered with Plotly.js. Built by <a href="https://github.com/Defani" target="_blank" rel="noopener">Defani</a></div>
+  </div>
+
+  <div class="main">
+    <div class="chart-frame">
+      <div id="plotlyDiv"></div>
+    </div>
+  </div>
+</div>
+
+<script src="plotly-cartesian.min.js"></script>
+<script src="chart_builder.js"></script>
+</body>
+</html>

@@ -121,8 +121,20 @@ var state = {
   showLegend: true,
   legendPos: 'top-right',
   legendCols: 1,
+  legendTitle: '',
   legendBorder: false,
   theme: 'dark',
+  /* axis range */
+  xAxisRangeMode: 'auto',
+  xAxisMin: null,
+  xAxisMax: null,
+  yAxisRangeMode: 'auto',
+  yAxisMin: null,
+  yAxisMax: null,
+  /* line thickness */
+  frameBorderWidth: 1.4,
+  axisLineWidth: 1,
+  titleSubtitleGap: 4,
   /* canvas */
   canvasUnit: 'px',
   canvasWidthPx: 720,
@@ -414,6 +426,9 @@ function buildLegendLayout(inkColor, bodyFont, bodySize){
     bordercolor: state.legendBorder ? inkColor : 'rgba(0,0,0,0)',
     borderwidth: state.legendBorder ? 1 : 0
   };
+  if(state.legendTitle){
+    base.title = {text: escapeHtml(state.legendTitle), font: {family: bodyFont, size: bodySize, color: inkColor}};
+  }
   return base;
 }
 
@@ -550,6 +565,7 @@ function render(){
   var traces = [];
 
   var titleSize = state.titleFontSize || 18;
+  var axisLineW = state.axisLineWidth || 1;
   var alignMap = {
     left:   {x:0.02, xanchor:'left'},
     center: {x:0.5,  xanchor:'center'},
@@ -564,7 +580,9 @@ function render(){
   if(subtitle){
     var subtitleText = escapeHtml(subtitle);
     if(state.titleItalic) subtitleText = '<i>' + subtitleText + '</i>';
-    subtitleHtml = '<br><span style="font-size:' + Math.max(titleSize - 6, 10) + 'px;font-weight:400;color:#5c5c58;font-family:' + subtitleFontFamily + '">' + subtitleText + '</span>';
+    var gapPx = state.titleSubtitleGap != null ? state.titleSubtitleGap : 4;
+    var gapHtml = gapPx > 0 ? '<br><span style="font-size:' + gapPx + 'px;line-height:1;">&#8203;</span>' : '';
+    subtitleHtml = '<br>' + gapHtml + '<span style="font-size:' + Math.max(titleSize - 6, 10) + 'px;font-weight:400;color:#5c5c58;font-family:' + subtitleFontFamily + '">' + subtitleText + '</span>';
   }
 
   var layout = {
@@ -584,18 +602,24 @@ function render(){
   if(state.showLegend){
     layout.legend = buildLegendLayout(INK, bodyFont, bodySize);
   }
-  var legend2 = null;
-  if(state.showLegend && state.legendCols === 2 && (state.legendPos === 'right-middle' || state.legendPos === 'left-middle' || state.legendPos === 'inside-top-right')){
-    legend2 = JSON.parse(JSON.stringify(layout.legend));
-    if(state.legendPos === 'right-middle'){ legend2.x = layout.legend.x + 0.17; }
-    else if(state.legendPos === 'left-middle'){ legend2.x = layout.legend.x - 0.17; }
-    else { legend2.x = layout.legend.x - 0.20; }
-    layout.legend2 = legend2;
+  var legendKeys = ['legend'];
+  var multiColPositions = ['right-middle','left-middle','inside-top-right'];
+  if(state.showLegend && state.legendCols > 1 && multiColPositions.indexOf(state.legendPos) !== -1){
+    var colStep = 0.17;
+    for(var lc = 2; lc <= state.legendCols; lc++){
+      var lg = JSON.parse(JSON.stringify(layout.legend));
+      delete lg.title; // only the first column carries the legend title
+      var off = (lc - 1) * colStep;
+      if(state.legendPos === 'right-middle'){ lg.x = layout.legend.x + off; }
+      else { lg.x = layout.legend.x - off; } // left-middle & inside-top-right stack to the left
+      layout['legend' + lc] = lg;
+      legendKeys.push('legend' + lc);
+    }
   }
 
   function legendForIndex(i){
-    if(legend2 && i % 2 === 1) return 'legend2';
-    return 'legend';
+    if(legendKeys.length <= 1) return 'legend';
+    return legendKeys[i % legendKeys.length];
   }
 
   var outlineW = state.outlineMarker ? 1.1 : 0;
@@ -607,8 +631,8 @@ function render(){
     case 'bar-single': {
       var axKey1s = vertical ? 'xaxis' : 'yaxis';
       var axKey2s = vertical ? 'yaxis' : 'xaxis';
-      layout[axKey1s] = {title:{text:xLabel,font:{family:bodyFont,size:axisTitleSize}}, tickfont:{family:bodyFont}, showgrid:false, linecolor:INK, linewidth:1};
-      layout[axKey2s] = {title:{text:yLabel,font:{family:bodyFont,size:axisTitleSize}}, tickfont:{family:bodyFont}, gridcolor:'#e4e2d8', zeroline:true, zerolinecolor:INK, linecolor:INK, linewidth:1};
+      layout[axKey1s] = {title:{text:xLabel,font:{family:bodyFont,size:axisTitleSize}}, tickfont:{family:bodyFont}, showgrid:false, linecolor:INK, linewidth:axisLineW};
+      layout[axKey2s] = {title:{text:yLabel,font:{family:bodyFont,size:axisTitleSize}}, tickfont:{family:bodyFont}, gridcolor:'#e4e2d8', zeroline:true, zerolinecolor:INK, linecolor:INK, linewidth:axisLineW};
       var firstActiveS = activeSeries[0];
       if(!firstActiveS){ break; }
       var valsS = state.seriesData[firstActiveS];
@@ -647,8 +671,8 @@ function render(){
       layout.bargroupgap = 0.12;
       var axKey1 = vertical ? 'xaxis' : 'yaxis';
       var axKey2 = vertical ? 'yaxis' : 'xaxis';
-      layout[axKey1] = {title: {text: xLabel, font:{family:bodyFont,size:axisTitleSize}}, tickfont:{family:bodyFont}, showgrid:false, linecolor:INK, linewidth:1};
-      layout[axKey2] = {title: {text: yLabel, font:{family:bodyFont,size:axisTitleSize}}, tickfont:{family:bodyFont}, gridcolor:'#e4e2d8', zeroline:true, zerolinecolor:INK, linecolor:INK, linewidth:1};
+      layout[axKey1] = {title: {text: xLabel, font:{family:bodyFont,size:axisTitleSize}}, tickfont:{family:bodyFont}, showgrid:false, linecolor:INK, linewidth:axisLineW};
+      layout[axKey2] = {title: {text: yLabel, font:{family:bodyFont,size:axisTitleSize}}, tickfont:{family:bodyFont}, gridcolor:'#e4e2d8', zeroline:true, zerolinecolor:INK, linecolor:INK, linewidth:axisLineW};
       activeSeries.forEach(function(name, idx){
         var vals = state.seriesData[name];
         var marker = {
@@ -675,8 +699,8 @@ function render(){
     case 'line':
     case 'area': {
       var axKeyA = 'xaxis', axKeyB = 'yaxis';
-      layout[axKeyA] = {title:{text:xLabel,font:{family:bodyFont,size:axisTitleSize}}, tickfont:{family:bodyFont}, showgrid:false, linecolor:INK, linewidth:1};
-      layout[axKeyB] = {title:{text:yLabel,font:{family:bodyFont,size:axisTitleSize}}, tickfont:{family:bodyFont}, gridcolor:'#e4e2d8', zeroline:true, zerolinecolor:INK, linecolor:INK, linewidth:1};
+      layout[axKeyA] = {title:{text:xLabel,font:{family:bodyFont,size:axisTitleSize}}, tickfont:{family:bodyFont}, showgrid:false, linecolor:INK, linewidth:axisLineW};
+      layout[axKeyB] = {title:{text:yLabel,font:{family:bodyFont,size:axisTitleSize}}, tickfont:{family:bodyFont}, gridcolor:'#e4e2d8', zeroline:true, zerolinecolor:INK, linecolor:INK, linewidth:axisLineW};
       var showMarkersL = state.lineShowMarkers;
       activeSeries.forEach(function(name, idx){
         var vals = state.seriesData[name];
@@ -706,8 +730,8 @@ function render(){
     }
 
     case 'scatter': {
-      layout.xaxis = {title:{text:xLabel,font:{family:bodyFont,size:axisTitleSize}}, tickfont:{family:bodyFont}, showgrid:false, linecolor:INK, linewidth:1};
-      layout.yaxis = {title:{text:yLabel,font:{family:bodyFont,size:axisTitleSize}}, tickfont:{family:bodyFont}, gridcolor:'#e4e2d8', zeroline:true, zerolinecolor:INK, linecolor:INK, linewidth:1};
+      layout.xaxis = {title:{text:xLabel,font:{family:bodyFont,size:axisTitleSize}}, tickfont:{family:bodyFont}, showgrid:false, linecolor:INK, linewidth:axisLineW};
+      layout.yaxis = {title:{text:yLabel,font:{family:bodyFont,size:axisTitleSize}}, tickfont:{family:bodyFont}, gridcolor:'#e4e2d8', zeroline:true, zerolinecolor:INK, linecolor:INK, linewidth:axisLineW};
       var connectLine = state.scatterShowLine;
       activeSeries.forEach(function(name, idx){
         var vals = state.seriesData[name];
@@ -764,8 +788,8 @@ function render(){
     }
 
     case 'histogram': {
-      layout.xaxis = {title:{text: vertical ? yLabel : xLabel,font:{family:bodyFont,size:axisTitleSize}}, tickfont:{family:bodyFont}, showgrid:false, linecolor:INK, linewidth:1};
-      layout.yaxis = {title:{text:'Frequency',font:{family:bodyFont,size:axisTitleSize}}, tickfont:{family:bodyFont}, gridcolor:'#e4e2d8', linecolor:INK, linewidth:1};
+      layout.xaxis = {title:{text: vertical ? yLabel : xLabel,font:{family:bodyFont,size:axisTitleSize}}, tickfont:{family:bodyFont}, showgrid:false, linecolor:INK, linewidth:axisLineW};
+      layout.yaxis = {title:{text:'Frequency',font:{family:bodyFont,size:axisTitleSize}}, tickfont:{family:bodyFont}, gridcolor:'#e4e2d8', linecolor:INK, linewidth:axisLineW};
       layout.barmode = 'overlay';
       activeSeries.forEach(function(name, idx){
         var vals = state.seriesData[name];
@@ -778,8 +802,8 @@ function render(){
 
     case 'box':
     case 'violin': {
-      layout.xaxis = {title:{text:'Series',font:{family:bodyFont,size:axisTitleSize}}, tickfont:{family:bodyFont}, showgrid:false, linecolor:INK, linewidth:1};
-      layout.yaxis = {title:{text:yLabel,font:{family:bodyFont,size:axisTitleSize}}, tickfont:{family:bodyFont}, gridcolor:'#e4e2d8', linecolor:INK, linewidth:1};
+      layout.xaxis = {title:{text:'Series',font:{family:bodyFont,size:axisTitleSize}}, tickfont:{family:bodyFont}, showgrid:false, linecolor:INK, linewidth:axisLineW};
+      layout.yaxis = {title:{text:yLabel,font:{family:bodyFont,size:axisTitleSize}}, tickfont:{family:bodyFont}, gridcolor:'#e4e2d8', linecolor:INK, linewidth:axisLineW};
       activeSeries.forEach(function(name, idx){
         var vals = state.seriesData[name];
         var col = isGrayscaleMode() ? grayForIndex(idx) : state.seriesMeta[name].color;
@@ -818,10 +842,19 @@ function render(){
     }
   }
 
+  if(state.xAxisRangeMode === 'custom' && isFinite(state.xAxisMin) && isFinite(state.xAxisMax) && layout.xaxis){
+    layout.xaxis.range = [state.xAxisMin, state.xAxisMax];
+    layout.xaxis.autorange = false;
+  }
+  if(state.yAxisRangeMode === 'custom' && isFinite(state.yAxisMin) && isFinite(state.yAxisMax) && layout.yaxis){
+    layout.yaxis.range = [state.yAxisMin, state.yAxisMax];
+    layout.yaxis.autorange = false;
+  }
+
   if(state.outlineFrame){
     layout.shapes = (layout.shapes||[]).concat([{
       type:'rect', xref:'paper', yref:'paper', x0:0, y0:0, x1:1, y1:1,
-      line: {color: INK, width: 1.4}
+      line: {color: INK, width: state.frameBorderWidth || 1.4}
     }]);
   }
 
@@ -904,6 +937,8 @@ document.getElementById('stylePattern').addEventListener('click', function(){ se
 
 document.getElementById('outlineMarker').addEventListener('change', function(){ state.outlineMarker = this.checked; render(); });
 document.getElementById('outlineFrame').addEventListener('change', function(){ state.outlineFrame = this.checked; render(); });
+document.getElementById('frameBorderWidth').addEventListener('input', function(){ state.frameBorderWidth = parseFloat(this.value) || 1.4; render(); });
+document.getElementById('axisLineWidth').addEventListener('input', function(){ state.axisLineWidth = parseFloat(this.value) || 1; render(); });
 document.getElementById('showValues').addEventListener('change', function(){ state.showValues = this.checked; render(); });
 
 document.getElementById('fontTitleSelect').addEventListener('change', function(){ state.fontTitle = this.value; render(); });
@@ -923,6 +958,7 @@ document.getElementById('titleAlignCenter').addEventListener('click', function()
 document.getElementById('titleAlignRight').addEventListener('click', function(){ setTitleAlign('right'); });
 
 document.getElementById('bodyFontSize').addEventListener('input', function(){ state.bodyFontSize = parseInt(this.value) || 12; render(); });
+document.getElementById('titleSubtitleGap').addEventListener('input', function(){ state.titleSubtitleGap = parseInt(this.value); if(isNaN(state.titleSubtitleGap)) state.titleSubtitleGap = 4; render(); });
 
 document.getElementById('textColor').addEventListener('input', function(){ INK = this.value; render(); });
 
@@ -936,19 +972,33 @@ document.getElementById('legendPos').addEventListener('change', function(){
   state.legendPos = this.value;
   render();
 });
-document.getElementById('legendCol1').addEventListener('click', function(){
-  state.legendCols = 1;
-  this.classList.add('active');
-  document.getElementById('legendCol2').classList.remove('active');
+document.getElementById('legendTitle').addEventListener('input', function(){ state.legendTitle = this.value; render(); });
+function setLegendCols(n){
+  state.legendCols = n;
+  [1,2,3,4].forEach(function(i){ document.getElementById('legendCol' + i).classList.toggle('active', i === n); });
   render();
-});
-document.getElementById('legendCol2').addEventListener('click', function(){
-  state.legendCols = 2;
-  this.classList.add('active');
-  document.getElementById('legendCol1').classList.remove('active');
-  render();
-});
+}
+document.getElementById('legendCol1').addEventListener('click', function(){ setLegendCols(1); });
+document.getElementById('legendCol2').addEventListener('click', function(){ setLegendCols(2); });
+document.getElementById('legendCol3').addEventListener('click', function(){ setLegendCols(3); });
+document.getElementById('legendCol4').addEventListener('click', function(){ setLegendCols(4); });
 document.getElementById('legendBorder').addEventListener('change', function(){ state.legendBorder = this.checked; render(); });
+
+function setRangeMode(axis, mode){
+  state[axis + 'AxisRangeMode'] = mode;
+  document.getElementById(axis + 'RangeAuto').classList.toggle('active', mode === 'auto');
+  document.getElementById(axis + 'RangeCustom').classList.toggle('active', mode === 'custom');
+  document.getElementById(axis + 'RangeInputs').style.display = mode === 'custom' ? 'flex' : 'none';
+  render();
+}
+document.getElementById('xRangeAuto').addEventListener('click', function(){ setRangeMode('x', 'auto'); });
+document.getElementById('xRangeCustom').addEventListener('click', function(){ setRangeMode('x', 'custom'); });
+document.getElementById('yRangeAuto').addEventListener('click', function(){ setRangeMode('y', 'auto'); });
+document.getElementById('yRangeCustom').addEventListener('click', function(){ setRangeMode('y', 'custom'); });
+document.getElementById('xRangeMin').addEventListener('input', function(){ state.xAxisMin = this.value === '' ? null : parseFloat(this.value); render(); });
+document.getElementById('xRangeMax').addEventListener('input', function(){ state.xAxisMax = this.value === '' ? null : parseFloat(this.value); render(); });
+document.getElementById('yRangeMin').addEventListener('input', function(){ state.yAxisMin = this.value === '' ? null : parseFloat(this.value); render(); });
+document.getElementById('yRangeMax').addEventListener('input', function(){ state.yAxisMax = this.value === '' ? null : parseFloat(this.value); render(); });
 
 ['chartTitle','chartSubtitle','xLabel','yLabel'].forEach(function(id){
   document.getElementById(id).addEventListener('input', render);

@@ -32,7 +32,7 @@
   .brand{ display:flex; align-items:center; gap:10px; }
   .brand h1{ font-size:15px; margin:0; font-weight:700; letter-spacing:.2px; }
   .brand span{ font-size:11px; color:var(--ink-soft); display:block; }
-  .topbar-actions{ display:flex; align-items:center; gap:10px; }
+  .topbar-actions{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
   .icon-btn{
     display:flex; align-items:center; justify-content:center; width:34px; height:34px;
     border-radius:8px; border:1px solid var(--line-strong); background:var(--panel-2);
@@ -116,7 +116,7 @@
   .num-pair > div{ flex:1; }
   .file-btn{ position:relative; overflow:hidden; }
   .file-btn input[type=file]{ position:absolute; inset:0; opacity:0; cursor:pointer; }
-  .badges{ margin-top:18px; display:flex; flex-wrap:wrap; gap:5px; justify-content:center; }
+  .badges{ display:flex; flex-wrap:wrap; align-items:center; gap:5px; }
   .badges img{ height:20px; display:block; }
   .powered{ margin-top:8px; font-size:10.5px; color:var(--ink-soft); text-align:center; }
   .powered a{ color:var(--accent); }
@@ -135,6 +135,13 @@
     </div>
   </div>
   <div class="topbar-actions">
+    <div class="badges">
+      <img src="https://img.shields.io/badge/HTML5-E34F26?logo=html5&logoColor=white" alt="HTML5">
+      <img src="https://img.shields.io/badge/CSS3-1572B6?logo=css3&logoColor=white" alt="CSS3">
+      <img src="https://img.shields.io/badge/JavaScript-F7DF1E?logo=javascript&logoColor=black" alt="JavaScript">
+      <img src="https://img.shields.io/badge/Plotly.js-3F4F75?logo=plotly&logoColor=white" alt="Plotly.js">
+      <img src="https://img.shields.io/badge/Backend-None-brightgreen" alt="No backend">
+    </div>
     <button class="icon-btn" id="themeToggle" title="Toggle light/dark theme">
       <svg id="themeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
     </button>
@@ -255,13 +262,6 @@
       <button id="exportPng">Export PNG</button>
     </div>
 
-    <div class="badges">
-      <img src="https://img.shields.io/badge/HTML5-E34F26?logo=html5&logoColor=white" alt="HTML5">
-      <img src="https://img.shields.io/badge/CSS3-1572B6?logo=css3&logoColor=white" alt="CSS3">
-      <img src="https://img.shields.io/badge/JavaScript-F7DF1E?logo=javascript&logoColor=black" alt="JavaScript">
-      <img src="https://img.shields.io/badge/Plotly.js-3F4F75?logo=plotly&logoColor=white" alt="Plotly.js">
-      <img src="https://img.shields.io/badge/Backend-None-brightgreen" alt="No backend">
-    </div>
     <div class="powered">Rendered with Plotly.js. Built by <a href="https://github.com/Defani" target="_blank" rel="noopener">Defani</a></div>
   </div>
 

@@ -246,23 +246,25 @@ function loadRawIntoState(raw){
     statusEl.textContent = 'Data is empty.';
     return;
   }
-  var lines = raw.trim().split(/\r?\n/).filter(function(l){ return l.trim().length; });
-  if(lines.length < 2){
+  // Papa Parse auto-detects the delimiter (comma or tab) and correctly
+  // handles quoted fields, embedded commas/newlines, and escaped quotes.
+  var parsed = Papa.parse(raw.trim(), { skipEmptyLines: true });
+  var rows = parsed.data;
+  if(rows.length < 2){
     statusEl.className = 'status error';
     statusEl.textContent = 'Needs at least 1 header row and 1 data row.';
     return;
   }
-  var delim = lines[0].indexOf('\t') >= 0 ? '\t' : ',';
-  var header = lines[0].split(delim).map(function(h){ return h.trim(); });
+  var header = rows[0].map(function(h){ return (h||'').trim(); });
   var seriesNames = header.slice(1);
   var categories = [];
   var seriesData = {};
   seriesNames.forEach(function(s){ seriesData[s] = []; });
 
-  for(var i=1;i<lines.length;i++){
-    var cols = lines[i].split(delim);
+  for(var i=1;i<rows.length;i++){
+    var cols = rows[i];
     if(cols.length < 2) continue;
-    categories.push(cols[0].trim());
+    categories.push((cols[0]||'').trim());
     for(var j=0;j<seriesNames.length;j++){
       var v = parseFloat((cols[j+1]||'').trim());
       seriesData[seriesNames[j]].push(isNaN(v) ? 0 : v);

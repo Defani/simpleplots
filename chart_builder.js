@@ -185,6 +185,52 @@ function buildPaletteGrid(){
 }
 buildPaletteGrid();
 
+/* ===================== UNIT / SYMBOL PICKER ===================== */
+var UNIT_GROUPS = [
+  {label:'Area & volume', items:['m\u00B2','m\u00B3','cm\u00B2','cm\u00B3','km\u00B2','L','mL']},
+  {label:'Rate / flux', items:['ha\u207B\u00B9','kg ha\u207B\u00B9','ton ha\u207B\u00B9','g m\u207B\u00B2','mg L\u207B\u00B9','\u00B5mol m\u207B\u00B2 s\u207B\u00B9','mol L\u207B\u00B9','mL min\u207B\u00B9','g m\u207B\u00B3']},
+  {label:'Mass & concentration', items:['mg','\u00B5g','ng','kg','mol','mmol','\u00B5mol','ppm','ppb']},
+  {label:'Temp & misc', items:['\u00B0C','\u00B0F','%','\u00B1','\u00D7','\u2192','\u2019']},
+  {label:'Stats & chem', items:['R\u00B2','R','p','\u03B1','\u03B2','\u03C3','\u03BC','\u03C7\u00B2','n=','CO\u2082','pH','H\u2082O']}
+];
+
+function insertAtCursor(input, text){
+  var start = (input.selectionStart != null) ? input.selectionStart : input.value.length;
+  var end = (input.selectionEnd != null) ? input.selectionEnd : input.value.length;
+  var val = input.value;
+  input.value = val.slice(0, start) + text + val.slice(end);
+  var pos = start + text.length;
+  input.focus();
+  if(input.setSelectionRange) input.setSelectionRange(pos, pos);
+  input.dispatchEvent(new Event('input', {bubbles:true}));
+}
+
+function populateUnitPickers(){
+  var pickers = document.querySelectorAll('.unit-picker');
+  Array.prototype.forEach.call(pickers, function(sel){
+    var placeholder = document.createElement('option');
+    placeholder.value = ''; placeholder.textContent = '\u03A9'; placeholder.disabled = true; placeholder.selected = true;
+    sel.appendChild(placeholder);
+    UNIT_GROUPS.forEach(function(g){
+      var og = document.createElement('optgroup');
+      og.label = g.label;
+      g.items.forEach(function(sym){
+        var opt = document.createElement('option');
+        opt.value = sym; opt.textContent = sym;
+        og.appendChild(opt);
+      });
+      sel.appendChild(og);
+    });
+    sel.addEventListener('change', function(){
+      if(!this.value) return;
+      var target = document.getElementById(this.getAttribute('data-target'));
+      if(target) insertAtCursor(target, this.value);
+      this.selectedIndex = 0;
+    });
+  });
+}
+populateUnitPickers();
+
 function reassignPaletteColors(){
   var colors = PALETTES[state.paletteIdx].colors;
   state.seriesNames.forEach(function(name, idx){
@@ -875,6 +921,8 @@ document.getElementById('titleAlignCenter').addEventListener('click', function()
 document.getElementById('titleAlignRight').addEventListener('click', function(){ setTitleAlign('right'); });
 
 document.getElementById('bodyFontSize').addEventListener('input', function(){ state.bodyFontSize = parseInt(this.value) || 12; render(); });
+
+document.getElementById('textColor').addEventListener('input', function(){ INK = this.value; render(); });
 
 document.getElementById('lineShowMarkers').addEventListener('change', function(){ state.lineShowMarkers = this.checked; render(); });
 document.getElementById('scatterShowLine').addEventListener('change', function(){ state.scatterShowLine = this.checked; updateLineStyleVisibility(); render(); });

@@ -9,13 +9,13 @@ A single-page, no-backend chart builder for publication-ready figures. Paste or 
 ![Backend](https://img.shields.io/badge/Backend-None-brightgreen)
 ![License](https://img.shields.io/badge/License-MIT-blue)
 
-## Live demo
+## Interface
+<img width="1919" height="1024" alt="Screenshot 2026-07-20 142211" src="https://github.com/user-attachments/assets/5616280e-e019-4959-a6aa-8ee717a2f014" />
 
 Once deployed to GitHub Pages:
 
-```
-https://<your-username>.github.io/<your-repo>/
-```
+https://defani.github.io/simpleplots/
+
 
 ## Features
 
@@ -33,35 +33,7 @@ https://<your-username>.github.io/<your-repo>/
 - **Light/dark UI theme** toggle (dark is the default)
 - **Zero dependencies to install**: Plotly.js is bundled locally, no build step, no server required
 
-## Getting started
 
-### Option 1: Open locally
-
-1. Download all three files into the same folder:
-   - `chart_builder.html`
-   - `chart_builder.js`
-   - `plotly-cartesian.min.js`
-2. Open `chart_builder.html` in any modern browser.
-
-### Option 2: Deploy with GitHub Pages
-
-1. Push all three files to the root of a GitHub repository (they must stay in the same folder, since the HTML loads the other two via relative paths).
-2. Optionally rename `chart_builder.html` to `index.html` for a cleaner URL.
-3. Go to **Settings → Pages**, choose the branch and folder, and save.
-4. Your app will be live at `https://<username>.github.io/<repo>/`.
-
-## Data format
-
-The first column is the category (x-axis label), and every column after that is a data series:
-
-```
-Plot	Species A	Species B	Species C
-P1	42.3	33.1	58.9
-P2	38.7	40.5	63.2
-P3	51.2	27.9	49.7
-```
-
-Paste tab-separated data (e.g. copied straight from Excel or Google Sheets), comma-separated CSV, or use the **Import CSV** button to load a `.csv`/`.tsv`/`.txt` file.
 
 ## Project structure
 

@@ -89,6 +89,7 @@ var LEGEND_HINTS = {
   'inside-top-right':'Legend inside the plot area, top right corner.'
 };
 var CHART_TYPE_HINTS = {
+  'bar-single':'Single bar: one bar per category, colored individually, using the first checked series.',
   'bar-group':'Grouped bar: one group of bars per category, one bar per series.',
   'bar-stack':'Stacked bar: series are stacked into a single bar per category.',
   'line':'Line: one line per series across categories.',
@@ -121,13 +122,25 @@ var state = {
   legendPos: 'top-right',
   legendCols: 1,
   legendBorder: false,
-  theme: 'dark'
+  theme: 'dark',
+  /* canvas */
+  canvasUnit: 'px',
+  canvasWidthPx: 720,
+  canvasHeightPx: 420,
+  /* title/body font styling */
+  titleFontSize: 18,
+  titleBold: true,
+  titleItalic: false,
+  titleAlign: 'left',
+  bodyFontSize: 12,
+  /* line/scatter style */
+  lineShowMarkers: true,
+  scatterShowLine: false,
+  scatterLineDash: 'solid',
+  lineWidth: 2.2
 };
 
 var sampleData = "Plot\tAvicennia marina\tAvicennia alba\tRhizophora stylosa\tSonneratia alba\nP1\t42.3\t33.1\t58.9\t71.4\nP2\t38.7\t40.5\t63.2\t68.2\nP3\t51.2\t27.9\t49.7\t75.8\nP4\t29.8\t36.4\t55.4\t66.9\nP5\t45.6\t31.2\t60.1\t79.3";
-document.getElementById('dataInput').value = sampleData;
-document.getElementById('chartTitle').value = 'Aboveground Biomass Carbon Content';
-document.getElementById('chartSubtitle').value = 'Comparison across mangrove species per observation plot';
 
 /* ===================== INIT UI LISTS ===================== */
 function populateFontSelect(sel, defaultValue){
@@ -255,6 +268,13 @@ document.getElementById('csvFile').addEventListener('change', function(e){
   reader.readAsText(file);
 });
 
+document.getElementById('loadSampleBtn').addEventListener('click', function(){
+  document.getElementById('dataInput').value = sampleData;
+  document.getElementById('chartTitle').value = 'Aboveground Biomass Carbon Content';
+  document.getElementById('chartSubtitle').value = 'Comparison across mangrove species per observation plot';
+  parseData();
+});
+
 /* ===================== SERIES LIST UI ===================== */
 function patternPreviewCss(h){
   if(h.kind === 'solid') return 'none';
@@ -336,12 +356,12 @@ var LEGEND_PRESETS = {
   'inside-top-right':{x:0.99,y:0.99, xanchor:'right',  yanchor:'top',    orientation:'v'}
 };
 
-function buildLegendLayout(inkColor, bodyFont){
+function buildLegendLayout(inkColor, bodyFont, bodySize){
   var preset = LEGEND_PRESETS[state.legendPos];
   var base = {
     x: preset.x, y: preset.y, xanchor: preset.xanchor, yanchor: preset.yanchor,
     orientation: preset.orientation,
-    font: {family: bodyFont, size: 12, color: inkColor},
+    font: {family: bodyFont, size: bodySize, color: inkColor},
     bgcolor: state.legendBorder ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0)',
     bordercolor: state.legendBorder ? inkColor : 'rgba(0,0,0,0)',
     borderwidth: state.legendBorder ? 1 : 0
@@ -371,13 +391,107 @@ function baseMarkerColor(name){
   return state.seriesMeta[name].color;
 }
 
+/* ===================== CANVAS SIZE / UNIT CONVERSION ===================== */
+/* Baseline convention: 96 "css" px per inch (same as browsers use for mm/cm).
+   DPI is decoupled from the design/canvas size and only scales the exported
+   raster resolution (see exportPngFile), so switching DPI never changes
+   the on-screen layout or the numbers you typed in mm/cm/px. */
+function toBaselinePx(value, unit){
+  if(unit === 'mm') return Math.round(value / 25.4 * 96);
+  if(unit === 'cm') return Math.round(value / 2.54 * 96);
+  return Math.round(value);
+}
+function fromBaselinePx(px, unit){
+  if(unit === 'mm') return +(px / 96 * 25.4).toFixed(1);
+  if(unit === 'cm') return +(px / 96 * 2.54).toFixed(2);
+  return px;
+}
+
+function setUnit(u){
+  state.canvasUnit = u;
+  ['unitPx','unitMm','unitCm'].forEach(function(id){ document.getElementById(id).classList.remove('active'); });
+  document.getElementById('unit' + u.charAt(0).toUpperCase() + u.slice(1)).classList.add('active');
+  document.getElementById('chartWidth').value = fromBaselinePx(state.canvasWidthPx, u);
+  document.getElementById('chartHeight').value = fromBaselinePx(state.canvasHeightPx, u);
+}
+document.getElementById('unitPx').addEventListener('click', function(){ setUnit('px'); });
+document.getElementById('unitMm').addEventListener('click', function(){ setUnit('mm'); });
+document.getElementById('unitCm').addEventListener('click', function(){ setUnit('cm'); });
+
+document.getElementById('chartWidth').addEventListener('input', function(){
+  var v = parseFloat(this.value);
+  if(isNaN(v) || v <= 0) return;
+  state.canvasWidthPx = toBaselinePx(v, state.canvasUnit);
+  render();
+});
+document.getElementById('chartHeight').addEventListener('input', function(){
+  var v = parseFloat(this.value);
+  if(isNaN(v) || v <= 0) return;
+  state.canvasHeightPx = toBaselinePx(v, state.canvasUnit);
+  render();
+});
+
+/* Displays the (potentially large) canvas scaled down to fit the screen via
+   a CSS transform on plotlyDiv only. Plotly itself always renders at the
+   true W x H, and exports always use state.canvasWidthPx/HeightPx directly,
+   so the preview scale never affects exported pixel dimensions. */
+function updateChartScale(){
+  var W = state.canvasWidthPx, H = state.canvasHeightPx;
+  var main = document.querySelector('.main');
+  var maxW = Math.max(280, main.clientWidth - 60);
+  var maxH = Math.max(280, window.innerHeight - 210);
+  var scale = Math.min(1, maxW / W, maxH / H);
+  var plotDiv = document.getElementById('plotlyDiv');
+  var wrap = document.getElementById('scaleWrap');
+  plotDiv.style.transformOrigin = 'top left';
+  plotDiv.style.transform = 'scale(' + scale + ')';
+  wrap.style.width = (W * scale) + 'px';
+  wrap.style.height = (H * scale) + 'px';
+  var note = document.getElementById('scaleNote');
+  if(scale < 0.999){
+    note.style.display = 'block';
+    note.textContent = 'Preview scaled to ' + Math.round(scale * 100) + '% to fit your screen — export uses the full ' + W + '\u00D7' + H + ' px at the selected DPI.';
+  } else {
+    note.style.display = 'none';
+  }
+}
+var resizeTimer;
+window.addEventListener('resize', function(){
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(updateChartScale, 120);
+});
+
+/* ===================== BLANK CANVAS (default state) ===================== */
+function renderBlankCanvas(){
+  var W = state.canvasWidthPx, H = state.canvasHeightPx;
+  Plotly.newPlot('plotlyDiv', [], {
+    width: W, height: H,
+    paper_bgcolor: '#ffffff', plot_bgcolor: '#ffffff',
+    xaxis: {visible:false}, yaxis: {visible:false},
+    margin: {t:0, r:0, b:0, l:0}
+  }, {responsive:false, displayModeBar:false, staticPlot:true});
+  updateChartScale();
+}
+
+/* ===================== LINE / MARKER STYLE VISIBILITY ===================== */
+function updateLineStyleVisibility(){
+  var ct = state.chartType;
+  var showSection = (ct === 'line' || ct === 'area' || ct === 'scatter');
+  document.getElementById('lineStyleHeading').style.display = showSection ? '' : 'none';
+  document.getElementById('lineStyleSection').style.display = showSection ? '' : 'none';
+  document.getElementById('lineMarkersRow').style.display = (ct === 'line' || ct === 'area') ? '' : 'none';
+  document.getElementById('scatterLineRow').style.display = (ct === 'scatter') ? '' : 'none';
+  document.getElementById('scatterDashWrap').style.display = (ct === 'scatter' && state.scatterShowLine) ? '' : 'none';
+}
+
 /* ===================== RENDER ===================== */
 function render(){
-  if(state.categories.length === 0) return;
-  var W = parseInt(document.getElementById('chartWidth').value) || 720;
-  var H = parseInt(document.getElementById('chartHeight').value) || 420;
+  if(state.categories.length === 0){ renderBlankCanvas(); return; }
+
+  var W = state.canvasWidthPx, H = state.canvasHeightPx;
   var titleFont = state.fontTitle;
   var bodyFont = state.fontBody;
+  var bodySize = state.bodyFontSize || 12;
   var xLabel = document.getElementById('xLabel').value;
   var yLabel = document.getElementById('yLabel').value;
   var title = document.getElementById('chartTitle').value;
@@ -386,22 +500,41 @@ function render(){
 
   var activeSeries = state.seriesNames.filter(function(n){ return state.seriesMeta[n].visible; });
   var traces = [];
+
+  var titleSize = state.titleFontSize || 18;
+  var alignMap = {
+    left:   {x:0.02, xanchor:'left'},
+    center: {x:0.5,  xanchor:'center'},
+    right:  {x:0.98, xanchor:'right'}
+  };
+  var align = alignMap[state.titleAlign] || alignMap.left;
+  var titleTextRaw = escapeHtml(title);
+  if(state.titleBold) titleTextRaw = '<b>' + titleTextRaw + '</b>';
+  if(state.titleItalic) titleTextRaw = '<i>' + titleTextRaw + '</i>';
+  var subtitleFontFamily = bodyFont.split(',')[0].replace(/'/g,'');
+  var subtitleHtml = '';
+  if(subtitle){
+    var subtitleText = escapeHtml(subtitle);
+    if(state.titleItalic) subtitleText = '<i>' + subtitleText + '</i>';
+    subtitleHtml = '<br><span style="font-size:' + Math.max(titleSize - 6, 10) + 'px;font-weight:400;color:#5c5c58;font-family:' + subtitleFontFamily + '">' + subtitleText + '</span>';
+  }
+
   var layout = {
     width: W, height: H,
     paper_bgcolor: '#ffffff',
     plot_bgcolor: '#ffffff',
-    font: {family: bodyFont, size: 12, color: INK},
+    font: {family: bodyFont, size: bodySize, color: INK},
     margin: {t: 78, r: 40, b: 70, l: 70},
     showlegend: state.showLegend,
     title: {
-      text: '<b>' + escapeHtml(title) + '</b>' + (subtitle ? '<br><span style="font-size:12px;font-weight:400;color:#5c5c58;font-family:' + bodyFont.split(',')[0].replace(/'/g,'') + '">' + escapeHtml(subtitle) + '</span>' : ''),
-      font: {family: titleFont, size: 18, color: INK},
-      x: 0.02, xanchor: 'left'
+      text: titleTextRaw + subtitleHtml,
+      font: {family: titleFont, size: titleSize, color: INK},
+      x: align.x, xanchor: align.xanchor
     }
   };
 
   if(state.showLegend){
-    layout.legend = buildLegendLayout(INK, bodyFont);
+    layout.legend = buildLegendLayout(INK, bodyFont, bodySize);
   }
   var legend2 = null;
   if(state.showLegend && state.legendCols === 2 && (state.legendPos === 'right-middle' || state.legendPos === 'left-middle' || state.legendPos === 'inside-top-right')){
@@ -419,8 +552,45 @@ function render(){
 
   var outlineW = state.outlineMarker ? 1.1 : 0;
   var valFmt = function(v){ return (Math.round(v*100)/100).toString(); };
+  var axisTitleSize = bodySize + 1;
 
   switch(state.chartType){
+
+    case 'bar-single': {
+      var axKey1s = vertical ? 'xaxis' : 'yaxis';
+      var axKey2s = vertical ? 'yaxis' : 'xaxis';
+      layout[axKey1s] = {title:{text:xLabel,font:{family:bodyFont,size:axisTitleSize}}, tickfont:{family:bodyFont}, showgrid:false, linecolor:INK, linewidth:1};
+      layout[axKey2s] = {title:{text:yLabel,font:{family:bodyFont,size:axisTitleSize}}, tickfont:{family:bodyFont}, gridcolor:'#e4e2d8', zeroline:true, zerolinecolor:INK, linecolor:INK, linewidth:1};
+      var firstActiveS = activeSeries[0];
+      if(!firstActiveS){ break; }
+      var valsS = state.seriesData[firstActiveS];
+      var palColorsS = PALETTES[state.paletteIdx].colors;
+      var barColorsS = state.categories.map(function(c, i){
+        return isGrayscaleMode() ? '#ffffff' : palColorsS[i % palColorsS.length];
+      });
+      var markerS = {color: barColorsS, line:{color:INK, width:outlineW}};
+      if(isPatternish()){
+        markerS.pattern = {
+          shape: state.categories.map(function(c,i){ return HATCH_DEFS[i % HATCH_DEFS.length].shape; }),
+          fgcolor: isGrayscaleMode() ? INK : 'rgba(255,255,255,0.65)',
+          bgcolor: isGrayscaleMode() ? '#ffffff' : barColorsS,
+          size:7, solidity:0.45
+        };
+      }
+      var tS = {
+        type:'bar', name: state.seriesMeta[firstActiveS].label,
+        marker: markerS, orientation: vertical ? 'v' : 'h', showlegend:false
+      };
+      if(vertical){ tS.x = state.categories; tS.y = valsS; } else { tS.y = state.categories; tS.x = valsS; }
+      if(state.showValues){
+        tS.text = valsS.map(valFmt);
+        tS.textposition = 'outside';
+        tS.textfont = {family: bodyFont, size: Math.max(bodySize-2,8), color: INK};
+      }
+      traces.push(tS);
+      layout.showlegend = false;
+      break;
+    }
 
     case 'bar-group':
     case 'bar-stack': {
@@ -429,8 +599,8 @@ function render(){
       layout.bargroupgap = 0.12;
       var axKey1 = vertical ? 'xaxis' : 'yaxis';
       var axKey2 = vertical ? 'yaxis' : 'xaxis';
-      layout[axKey1] = {title: {text: xLabel, font:{family:bodyFont,size:13}}, tickfont:{family:bodyFont}, showgrid:false, linecolor:INK, linewidth:1};
-      layout[axKey2] = {title: {text: yLabel, font:{family:bodyFont,size:13}}, tickfont:{family:bodyFont}, gridcolor:'#e4e2d8', zeroline:true, zerolinecolor:INK, linecolor:INK, linewidth:1};
+      layout[axKey1] = {title: {text: xLabel, font:{family:bodyFont,size:axisTitleSize}}, tickfont:{family:bodyFont}, showgrid:false, linecolor:INK, linewidth:1};
+      layout[axKey2] = {title: {text: yLabel, font:{family:bodyFont,size:axisTitleSize}}, tickfont:{family:bodyFont}, gridcolor:'#e4e2d8', zeroline:true, zerolinecolor:INK, linecolor:INK, linewidth:1};
       activeSeries.forEach(function(name, idx){
         var vals = state.seriesData[name];
         var marker = {
@@ -447,7 +617,7 @@ function render(){
         if(state.showValues){
           t.text = vals.map(valFmt);
           t.textposition = 'outside';
-          t.textfont = {family: bodyFont, size: 10, color: INK};
+          t.textfont = {family: bodyFont, size: Math.max(bodySize-2,8), color: INK};
         }
         traces.push(t);
       });
@@ -457,17 +627,21 @@ function render(){
     case 'line':
     case 'area': {
       var axKeyA = 'xaxis', axKeyB = 'yaxis';
-      layout[axKeyA] = {title:{text:xLabel,font:{family:bodyFont,size:13}}, tickfont:{family:bodyFont}, showgrid:false, linecolor:INK, linewidth:1};
-      layout[axKeyB] = {title:{text:yLabel,font:{family:bodyFont,size:13}}, tickfont:{family:bodyFont}, gridcolor:'#e4e2d8', zeroline:true, zerolinecolor:INK, linecolor:INK, linewidth:1};
+      layout[axKeyA] = {title:{text:xLabel,font:{family:bodyFont,size:axisTitleSize}}, tickfont:{family:bodyFont}, showgrid:false, linecolor:INK, linewidth:1};
+      layout[axKeyB] = {title:{text:yLabel,font:{family:bodyFont,size:axisTitleSize}}, tickfont:{family:bodyFont}, gridcolor:'#e4e2d8', zeroline:true, zerolinecolor:INK, linecolor:INK, linewidth:1};
+      var showMarkersL = state.lineShowMarkers;
       activeSeries.forEach(function(name, idx){
         var vals = state.seriesData[name];
         var lineColor = isGrayscaleMode() ? grayForIndex(idx) : state.seriesMeta[name].color;
+        var modeStr = showMarkersL
+          ? (state.showValues ? 'lines+markers+text' : 'lines+markers')
+          : (state.showValues ? 'lines+text' : 'lines');
         var t = {
           type: 'scatter',
-          mode: state.showValues ? 'lines+markers+text' : 'lines+markers',
+          mode: modeStr,
           name: state.seriesMeta[name].label,
           x: state.categories, y: vals,
-          line: {color: lineColor, width: 2.2, dash: isPatternish() ? DASH_CYCLE[idx % DASH_CYCLE.length] : 'solid'},
+          line: {color: lineColor, width: state.lineWidth || 2.2, dash: isPatternish() ? DASH_CYCLE[idx % DASH_CYCLE.length] : 'solid'},
           marker: {color: lineColor, size: 7, symbol: isPatternish() ? SYMBOL_CYCLE[idx % SYMBOL_CYCLE.length] : 'circle',
                     line: {color: INK, width: outlineW}},
           legend: legendForIndex(idx)
@@ -477,27 +651,34 @@ function render(){
           t.stackgroup = 'one';
           t.fillcolor = hexToRgba(lineColor, 0.55);
         }
-        if(state.showValues){ t.text = vals.map(valFmt); t.textposition = 'top center'; t.textfont = {family:bodyFont,size:10,color:INK}; }
+        if(state.showValues){ t.text = vals.map(valFmt); t.textposition = 'top center'; t.textfont = {family:bodyFont,size:Math.max(bodySize-2,8),color:INK}; }
         traces.push(t);
       });
       break;
     }
 
     case 'scatter': {
-      layout.xaxis = {title:{text:xLabel,font:{family:bodyFont,size:13}}, tickfont:{family:bodyFont}, showgrid:false, linecolor:INK, linewidth:1};
-      layout.yaxis = {title:{text:yLabel,font:{family:bodyFont,size:13}}, tickfont:{family:bodyFont}, gridcolor:'#e4e2d8', zeroline:true, zerolinecolor:INK, linecolor:INK, linewidth:1};
+      layout.xaxis = {title:{text:xLabel,font:{family:bodyFont,size:axisTitleSize}}, tickfont:{family:bodyFont}, showgrid:false, linecolor:INK, linewidth:1};
+      layout.yaxis = {title:{text:yLabel,font:{family:bodyFont,size:axisTitleSize}}, tickfont:{family:bodyFont}, gridcolor:'#e4e2d8', zeroline:true, zerolinecolor:INK, linecolor:INK, linewidth:1};
+      var connectLine = state.scatterShowLine;
       activeSeries.forEach(function(name, idx){
         var vals = state.seriesData[name];
         var col = isGrayscaleMode() ? grayForIndex(idx) : state.seriesMeta[name].color;
+        var modeStr = connectLine
+          ? (state.showValues ? 'lines+markers+text' : 'lines+markers')
+          : (state.showValues ? 'markers+text' : 'markers');
         var t = {
-          type:'scatter', mode: state.showValues ? 'markers+text' : 'markers',
+          type:'scatter', mode: modeStr,
           name: state.seriesMeta[name].label,
           x: state.categories, y: vals,
           marker: {color: col, size: 10, symbol: isPatternish() ? SYMBOL_CYCLE[idx % SYMBOL_CYCLE.length] : 'circle',
                     line: {color: INK, width: outlineW}},
           legend: legendForIndex(idx)
         };
-        if(state.showValues){ t.text = vals.map(valFmt); t.textposition = 'top center'; t.textfont={family:bodyFont,size:10,color:INK}; }
+        if(connectLine){
+          t.line = {color: col, width: state.lineWidth || 2, dash: state.scatterLineDash || 'solid'};
+        }
+        if(state.showValues){ t.text = vals.map(valFmt); t.textposition = 'top center'; t.textfont={family:bodyFont,size:Math.max(bodySize-2,8),color:INK}; }
         traces.push(t);
       });
       break;
@@ -526,17 +707,17 @@ function render(){
         hole: state.chartType === 'donut' ? 0.45 : 0,
         marker: marker,
         textinfo: state.showValues ? 'label+value+percent' : 'label+percent',
-        textfont: {family: bodyFont, size: 11, color: INK},
+        textfont: {family: bodyFont, size: Math.max(bodySize-1,9), color: INK},
         legend: 'legend'
       };
       traces.push(t);
-      layout.annotations = [{text:'Series: ' + (state.seriesMeta[firstActive].label||firstActive), showarrow:false, x:0.5, y:-0.12, xref:'paper', yref:'paper', font:{family:bodyFont,size:11,color:'#5c5c58'}}];
+      layout.annotations = [{text:'Series: ' + (state.seriesMeta[firstActive].label||firstActive), showarrow:false, x:0.5, y:-0.12, xref:'paper', yref:'paper', font:{family:bodyFont,size:Math.max(bodySize-1,9),color:'#5c5c58'}}];
       break;
     }
 
     case 'histogram': {
-      layout.xaxis = {title:{text: vertical ? yLabel : xLabel,font:{family:bodyFont,size:13}}, tickfont:{family:bodyFont}, showgrid:false, linecolor:INK, linewidth:1};
-      layout.yaxis = {title:{text:'Frequency',font:{family:bodyFont,size:13}}, tickfont:{family:bodyFont}, gridcolor:'#e4e2d8', linecolor:INK, linewidth:1};
+      layout.xaxis = {title:{text: vertical ? yLabel : xLabel,font:{family:bodyFont,size:axisTitleSize}}, tickfont:{family:bodyFont}, showgrid:false, linecolor:INK, linewidth:1};
+      layout.yaxis = {title:{text:'Frequency',font:{family:bodyFont,size:axisTitleSize}}, tickfont:{family:bodyFont}, gridcolor:'#e4e2d8', linecolor:INK, linewidth:1};
       layout.barmode = 'overlay';
       activeSeries.forEach(function(name, idx){
         var vals = state.seriesData[name];
@@ -549,8 +730,8 @@ function render(){
 
     case 'box':
     case 'violin': {
-      layout.xaxis = {title:{text:'Series',font:{family:bodyFont,size:13}}, tickfont:{family:bodyFont}, showgrid:false, linecolor:INK, linewidth:1};
-      layout.yaxis = {title:{text:yLabel,font:{family:bodyFont,size:13}}, tickfont:{family:bodyFont}, gridcolor:'#e4e2d8', linecolor:INK, linewidth:1};
+      layout.xaxis = {title:{text:'Series',font:{family:bodyFont,size:axisTitleSize}}, tickfont:{family:bodyFont}, showgrid:false, linecolor:INK, linewidth:1};
+      layout.yaxis = {title:{text:yLabel,font:{family:bodyFont,size:axisTitleSize}}, tickfont:{family:bodyFont}, gridcolor:'#e4e2d8', linecolor:INK, linewidth:1};
       activeSeries.forEach(function(name, idx){
         var vals = state.seriesData[name];
         var col = isGrayscaleMode() ? grayForIndex(idx) : state.seriesMeta[name].color;
@@ -572,8 +753,8 @@ function render(){
       var z = activeSeries.map(function(n){ return state.seriesData[n]; });
       var names = activeSeries.map(function(n){ return state.seriesMeta[n].label; });
       var colorscale = isGrayscaleMode() ? 'Greys' : plotlyColorscaleFromPalette(PALETTES[state.paletteIdx].colors);
-      layout.xaxis = {title:{text:xLabel,font:{family:bodyFont,size:13}}, tickfont:{family:bodyFont}};
-      layout.yaxis = {title:{text:'Series',font:{family:bodyFont,size:13}}, tickfont:{family:bodyFont}};
+      layout.xaxis = {title:{text:xLabel,font:{family:bodyFont,size:axisTitleSize}}, tickfont:{family:bodyFont}};
+      layout.yaxis = {title:{text:'Series',font:{family:bodyFont,size:axisTitleSize}}, tickfont:{family:bodyFont}};
       var t = {
         type:'heatmap', x: state.categories, y: names, z: z,
         colorscale: colorscale, showscale: true,
@@ -581,7 +762,7 @@ function render(){
       };
       if(state.showValues){
         t.texttemplate = '%{z:.1f}';
-        t.textfont = {family: bodyFont, size: 10, color: '#1a1a1a'};
+        t.textfont = {family: bodyFont, size: Math.max(bodySize-2,8), color: '#1a1a1a'};
       }
       traces.push(t);
       layout.showlegend = false;
@@ -598,6 +779,7 @@ function render(){
 
   var config = {responsive:false, displaylogo:false, displayModeBar:true, modeBarButtonsToRemove:['lasso2d','select2d']};
   Plotly.newPlot('plotlyDiv', traces, layout, config);
+  updateChartScale();
 }
 
 /* ===================== HELPERS ===================== */
@@ -617,7 +799,7 @@ function plotlyColorscaleFromPalette(colors){
 
 /* ===================== EXPORT ===================== */
 function exportSvgFile(){
-  Plotly.toImage(document.getElementById('plotlyDiv'), {format:'svg', width: parseInt(document.getElementById('chartWidth').value)||720, height: parseInt(document.getElementById('chartHeight').value)||420})
+  Plotly.toImage(document.getElementById('plotlyDiv'), {format:'svg', width: state.canvasWidthPx, height: state.canvasHeightPx})
     .then(function(url){
       var a = document.createElement('a');
       a.href = url; a.download = 'chart.svg';
@@ -627,9 +809,7 @@ function exportSvgFile(){
 function exportPngFile(){
   var dpi = parseInt(document.getElementById('dpiSelect').value) || 300;
   var scale = dpi / 96;
-  var W = parseInt(document.getElementById('chartWidth').value) || 720;
-  var H = parseInt(document.getElementById('chartHeight').value) || 420;
-  Plotly.toImage(document.getElementById('plotlyDiv'), {format:'png', width:W, height:H, scale:scale})
+  Plotly.toImage(document.getElementById('plotlyDiv'), {format:'png', width: state.canvasWidthPx, height: state.canvasHeightPx, scale: scale})
     .then(function(url){
       var a = document.createElement('a');
       a.href = url; a.download = 'chart_' + dpi + 'dpi.png';
@@ -643,6 +823,7 @@ document.getElementById('parseBtn').addEventListener('click', parseData);
 document.getElementById('chartType').addEventListener('change', function(){
   state.chartType = this.value;
   document.getElementById('chartTypeHint').textContent = CHART_TYPE_HINTS[state.chartType] || '';
+  updateLineStyleVisibility();
   render();
 });
 
@@ -680,6 +861,26 @@ document.getElementById('showValues').addEventListener('change', function(){ sta
 document.getElementById('fontTitleSelect').addEventListener('change', function(){ state.fontTitle = this.value; render(); });
 document.getElementById('fontBodySelect').addEventListener('change', function(){ state.fontBody = this.value; render(); });
 
+document.getElementById('titleFontSize').addEventListener('input', function(){ state.titleFontSize = parseInt(this.value) || 18; render(); });
+document.getElementById('titleBold').addEventListener('change', function(){ state.titleBold = this.checked; render(); });
+document.getElementById('titleItalic').addEventListener('change', function(){ state.titleItalic = this.checked; render(); });
+function setTitleAlign(a){
+  state.titleAlign = a;
+  ['titleAlignLeft','titleAlignCenter','titleAlignRight'].forEach(function(id){ document.getElementById(id).classList.remove('active'); });
+  document.getElementById('titleAlign' + a.charAt(0).toUpperCase() + a.slice(1)).classList.add('active');
+  render();
+}
+document.getElementById('titleAlignLeft').addEventListener('click', function(){ setTitleAlign('left'); });
+document.getElementById('titleAlignCenter').addEventListener('click', function(){ setTitleAlign('center'); });
+document.getElementById('titleAlignRight').addEventListener('click', function(){ setTitleAlign('right'); });
+
+document.getElementById('bodyFontSize').addEventListener('input', function(){ state.bodyFontSize = parseInt(this.value) || 12; render(); });
+
+document.getElementById('lineShowMarkers').addEventListener('change', function(){ state.lineShowMarkers = this.checked; render(); });
+document.getElementById('scatterShowLine').addEventListener('change', function(){ state.scatterShowLine = this.checked; updateLineStyleVisibility(); render(); });
+document.getElementById('scatterLineDash').addEventListener('change', function(){ state.scatterLineDash = this.value; render(); });
+document.getElementById('lineWidthInput').addEventListener('input', function(){ state.lineWidth = parseFloat(this.value) || 2.2; render(); });
+
 document.getElementById('showLegend').addEventListener('change', function(){ state.showLegend = this.checked; render(); });
 document.getElementById('legendPos').addEventListener('change', function(){
   state.legendPos = this.value;
@@ -699,7 +900,7 @@ document.getElementById('legendCol2').addEventListener('click', function(){
 });
 document.getElementById('legendBorder').addEventListener('change', function(){ state.legendBorder = this.checked; render(); });
 
-['chartTitle','chartSubtitle','xLabel','yLabel','chartWidth','chartHeight'].forEach(function(id){
+['chartTitle','chartSubtitle','xLabel','yLabel'].forEach(function(id){
   document.getElementById(id).addEventListener('input', render);
 });
 
@@ -721,4 +922,5 @@ applyTheme('dark');
 
 /* ===================== INIT ===================== */
 document.getElementById('chartTypeHint').textContent = CHART_TYPE_HINTS[state.chartType];
-parseData();
+updateLineStyleVisibility();
+renderBlankCanvas();
